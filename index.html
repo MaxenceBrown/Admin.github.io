@@ -104,6 +104,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .img-preview img{width:100%;max-height:220px;object-fit:contain;border-radius:8px;border:1px solid var(--border)}
 .img-remove{position:absolute;top:6px;right:6px;background:rgba(13,13,18,.85);border:1px solid var(--border2);border-radius:6px;color:var(--danger);font-size:12px;padding:3px 8px;cursor:pointer;font-family:'DM Sans',sans-serif}
 .q-img{width:100%;max-height:260px;object-fit:contain;border-radius:10px;margin-bottom:1rem;border:1px solid var(--border)}
+.q-correction{background:rgba(80,200,120,.06);border:1px solid rgba(80,200,120,.25);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.7;color:var(--text);margin-bottom:1rem;white-space:pre-wrap}
+.q-correction-label{font-size:11px;font-weight:700;color:var(--success);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px}
 .add-q-bar{display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap}
 .add-q-btn{padding:8px 16px;border:1px dashed var(--border2);border-radius:10px;font-size:13px;color:var(--muted);cursor:pointer;background:none;transition:all .15s;font-family:'DM Sans',sans-serif}
 .add-q-btn:hover{border-color:var(--accent);color:var(--accent)}
@@ -415,6 +417,9 @@ function renderCorrection() {
     if(q.type==='open'){
       const text=(ans||'').trim();
       ansDisplay=`<div class="q-answer${text?'':' empty'}">${text||'Aucune réponse'}</div>`;
+      if(q.correction&&q.correction.trim()){
+        ansDisplay+=`<div class="q-correction-label">✓ Corrigé attendu — ${q.points} pt${q.points>1?'s':''}</div><div class="q-correction">${q.correction}</div>`;
+      }
     } else {
       const selected=Array.isArray(ans)?ans:(ans!=null?[ans]:[]);
       const correct=q.correct||[];
@@ -500,6 +505,7 @@ function renderEditorQ(q,i){
       }
     </div>
     <div class="ed-field"><div class="ed-label">Barème (points)</div><input type="number" class="ed-input" style="width:80px" min="1" max="20" value="${q.points}" oninput="questions[${i}].points=parseInt(this.value)||1"></div>
+    ${q.type==='open'?`<div class="ed-field"><div class="ed-label" style="color:var(--success)">✓ Correction attendue <span style="color:var(--muted);font-weight:400">(visible uniquement par les formateurs)</span></div><textarea class="ed-input" style="min-height:80px;resize:vertical;border-color:rgba(80,200,120,.25)" placeholder="Décris la réponse attendue, les éléments clés à retrouver, le barème de sous-points…" oninput="questions[${i}].correction=this.value">${q.correction||''}</textarea></div>`:''}
     ${optHtml}</div>`;
 }
 function updateCorrect(qi){
