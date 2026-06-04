@@ -96,6 +96,14 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .ed-opt-row{display:flex;gap:6px;align-items:center}
 .ed-opt-correct{width:16px;height:16px;accent-color:var(--accent);flex-shrink:0}
 .add-opt-btn{font-size:12px;color:var(--accent);cursor:pointer;background:none;border:none;margin-top:6px;font-family:'DM Sans',sans-serif;text-align:left}
+.img-upload-zone{border:2px dashed var(--border2);border-radius:10px;padding:1rem;text-align:center;cursor:pointer;transition:border-color .2s;margin-top:6px;position:relative}
+.img-upload-zone:hover{border-color:var(--accent)}
+.img-upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.img-upload-zone .upload-label{font-size:12px;color:var(--muted);pointer-events:none}
+.img-preview{position:relative;margin-top:8px}
+.img-preview img{width:100%;max-height:220px;object-fit:contain;border-radius:8px;border:1px solid var(--border)}
+.img-remove{position:absolute;top:6px;right:6px;background:rgba(13,13,18,.85);border:1px solid var(--border2);border-radius:6px;color:var(--danger);font-size:12px;padding:3px 8px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.q-img{width:100%;max-height:260px;object-fit:contain;border-radius:10px;margin-bottom:1rem;border:1px solid var(--border)}
 .add-q-bar{display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap}
 .add-q-btn{padding:8px 16px;border:1px dashed var(--border2);border-radius:10px;font-size:13px;color:var(--muted);cursor:pointer;background:none;transition:all .15s;font-family:'DM Sans',sans-serif}
 .add-q-btn:hover{border-color:var(--accent);color:var(--accent)}
@@ -263,8 +271,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 <div class="toast" id="toast"></div>
 
 <script>
-let ADMIN_PASSWORD = 'test321';
-let FORMATEUR_PASSWORD = 'test123';
+let ADMIN_PASSWORD = 'admin2025';
+let FORMATEUR_PASSWORD = 'formateur2025';
 let submissions = [], questions = [], currentSub = null, currentScores = {};
 let config = { title: 'Procédure 2', duration: 25, pass: 17, signature: '', rules: '' };
 
@@ -416,6 +424,7 @@ function renderCorrection() {
     }
     const btns=Array.from({length:q.points+1},(_,pi)=>`<button class="pts-btn${sc===pi?' active':''}" onclick="setScore('${q.id}',${pi},this)">${pi}</button>`).join('');
     html+=`<div class="q-block"><div class="q-head"><div class="q-tag">Q${i+1}</div><div class="q-question">${q.text.length>120?q.text.slice(0,120)+'…':q.text}</div><div style="font-size:11px;color:var(--muted);white-space:nowrap;margin-left:8px">${q.points}pt</div></div>
+      ${q.image?`<img src="${q.image}" class="q-img" alt="image question">`:''}
       ${ansDisplay}<div class="scoring-row"><span class="score-label2">Note :</span>${btns}${isAuto?'<span style="font-size:11px;color:var(--muted);margin-left:auto">Auto-corrigé</span>':''}</div></div>`;
   });
   html+=`<button class="save-btn" onclick="saveCorrection()">Sauvegarder la correction</button>`;
@@ -484,6 +493,12 @@ function renderEditorQ(q,i){
       <button class="ed-del" onclick="deleteQuestion(${i})" title="Supprimer">×</button></div>
     <div class="ed-field"><div class="ed-label">Section</div><input type="text" class="ed-input" value="${(q.section||'').replace(/"/g,'&quot;')}" oninput="questions[${i}].section=this.value"></div>
     <div class="ed-field"><div class="ed-label">Intitulé de la question</div><textarea class="ed-input" style="min-height:70px;resize:vertical" oninput="questions[${i}].text=this.value">${q.text||''}</textarea></div>
+    <div class="ed-field"><div class="ed-label">Image (optionnel)</div>
+      ${q.image
+        ? `<div class="img-preview"><img src="${q.image}" alt="question image"><button class="img-remove" onclick="removeImage(${i})">✕ Supprimer</button></div>`
+        : `<div class="img-upload-zone"><input type="file" accept="image/*" onchange="uploadImage(${i},this)"><div class="upload-label">📷 Cliquer pour ajouter une image</div></div>`
+      }
+    </div>
     <div class="ed-field"><div class="ed-label">Barème (points)</div><input type="number" class="ed-input" style="width:80px" min="1" max="20" value="${q.points}" oninput="questions[${i}].points=parseInt(this.value)||1"></div>
     ${optHtml}</div>`;
 }
@@ -499,6 +514,16 @@ function addQuestion(type){
   setTimeout(()=>document.getElementById(`eq_${questions.length-1}`)?.scrollIntoView({behavior:'smooth'}),100);
 }
 function deleteQuestion(i){ if(!confirm('Supprimer cette question ?'))return; questions.splice(i,1); renderEditor(); }
+function uploadImage(i, input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 1.5 * 1024 * 1024) { toast('Image trop lourde (max 1.5 Mo)'); return; }
+  const reader = new FileReader();
+  reader.onload = e => { questions[i].image = e.target.result; renderEditor(); };
+  reader.readAsDataURL(file);
+}
+function removeImage(i) { delete questions[i].image; renderEditor(); }
+
 async function saveQuestions(){
   try{await window.storage.set('proc2_questions',JSON.stringify(questions));toast('Questions sauvegardées ✓');renderInfoRow();}
   catch(e){toast('Erreur de sauvegarde');}
