@@ -136,7 +136,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 <!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref, get, set, query, orderByKey, startAt, endAt } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getDatabase, ref, get, set, remove, query, orderByKey, startAt, endAt } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCxdDLLbMcVVP8OCgiyIZs1-ujz7rkMSsg",
@@ -164,6 +164,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
         await set(ref(db, 'proc2/' + key), value);
         return { value };
       } catch(e) { console.error('Firebase set error', e); return null; }
+    },
+    delete: async (key) => {
+      try {
+        await remove(ref(db, 'proc2/' + key));
+        return { deleted: true };
+      } catch(e) { console.error('Firebase delete error', e); return null; }
     },
     list: async (prefix) => {
       try {
@@ -481,15 +487,36 @@ async function saveCorrection(){
 
 async function deleteSubmission(i){
   if(!confirm(`Supprimer la copie de "${submissions[i].candidat}" ?`)) return;
+  const sub = submissions[i];
   submissions.splice(i,1);
-  try{await window.storage.set('proc2_submissions',JSON.stringify(submissions));toast('Copie supprimée');renderStats();renderList();}
+  try{
+    await window.storage.set('proc2_submissions',JSON.stringify(submissions));
+    // Supprime aussi la clé individuelle correspondante, sinon la copie
+    // ressuscite (sans les notes) au prochain chargement.
+    if (sub && sub.id !== undefined) {
+      try { await window.storage.delete('proc2_sub_' + sub.id); } catch(e){}
+    }
+    toast('Copie supprimée');renderStats();renderList();
+  }
   catch(e){toast('Erreur de suppression');}
 }
 async function deleteAllSubmissions(){
   if(!confirm('ATTENTION : Supprimer TOUTES les copies ?')) return;
   if(!confirm('Confirmer la suppression de toutes les copies ?')) return;
-  submissions=[];
-  try{await window.storage.set('proc2_submissions',JSON.stringify([]));toast('Toutes les copies supprimées');renderStats();renderList();}
+  try{
+    await window.storage.set('proc2_submissions',JSON.stringify([]));
+    // Supprime aussi toutes les clés individuelles proc2_sub_*
+    try {
+      const keys = await window.storage.list('proc2_sub_');
+      if (keys && keys.keys) {
+        for (const key of keys.keys) {
+          try { await window.storage.delete(key); } catch(e){}
+        }
+      }
+    } catch(e){}
+    submissions=[];
+    toast('Toutes les copies supprimées');renderStats();renderList();
+  }
   catch(e){toast('Erreur');}
 }
 async function clearQuestions(){
